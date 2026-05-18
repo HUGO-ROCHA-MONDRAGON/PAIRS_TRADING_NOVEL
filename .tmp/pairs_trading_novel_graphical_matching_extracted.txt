@@ -1,0 +1,1225 @@
+
+
+===== PAGE 1 =====
+
+Pairs Trading Using a Novel Graphical Matching
+Approach
+Khizar Qureshi
+Massachusetts Institute of Technology, 77 Massachusetts Ave., Cambridge, MA 02139, kqureshi@mit.edu
+Tauhid Zaman
+Yale School of Management, Yale University, 165 Whitney Ave Ave., New Haven, CT 06511, tauhid.zaman@yale.edu
+Pairs trading, a strategy that capitalizes on price movements of asset pairs driven by similar factors, has gained sig-
+nificant popularity among traders. Common practice involves selecting highly cointegrated pairs to form a portfolio,
+which often leads to the inclusion of multiple pairs sharing common assets. This approach, while intuitive, inadver-
+tently elevates portfolio variance and diminishes risk-adjusted returns by concentrating on a small number of highly
+cointegrated assets. Our study introduces an innovative pair selection method employing graphical matchings designed
+to tackle this challenge. We model all assets and their cointegration levels with a weighted graph, where edges signify
+pairs and their weights indicate the extent of cointegration. A portfolio of pairs is a subgraph of this graph. We con-
+struct a portfolio which is a maximum weighted matching of this graph to select pairs which have strong cointegration
+while simultaneously ensuring that there are no shared assets within any pair of pairs. This approach ensures each
+asset is included in just one pair, leading to a significantly lower variance in the matching-based portfolio compared to
+a baseline approach that selects pairs purely based on cointegration. Theoretical analysis and empirical testing using
+data from the S&P 500 between 2017 and 2023, affirm the efficacy of our method. Notably, our matching-based strategy
+showcases a marked improvement in risk-adjusted performance, evidenced by a gross Sharpe ratio of 1.23, a significant
+enhancement over the baseline value of 0.48 and market value of 0.59. Additionally, our approach demonstrates reduced
+trading costs attributable to lower turnover, alongside minimized single asset risk due to a more diversified asset base.
+Key words: Graphs, matchings, time series, trading, operations research, financial engineering, portfolio management,
+risk
+1
+arXiv:2403.07998v1  [stat.AP]  12 Mar 2024
+
+===== PAGE 2 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+2
+1. Introduction
+Pairs trading is an investment strategy based on the co-movement of prices of pairs of assets. If the two
+prices, typically driven by common statistical factors, diverge, a long-short position in the two assets can
+be used to profit from the re-convergence. Pairs are selected based on statistical price similarity or funda-
+mental similarity between firms, and then monitored for price divergence from pre-determined thresholds.
+Based on the distance from the threshold, traders buy one of the assets, and sell the other, in order to
+establish a long-short position until the spread between the asset prices returns to its expected value. A
+comprehensive review of pairs trading can be found in Vidyamurthy (2004).
+Literature has maintained a focus on identifying single pairs and monetizing on a on a daily, monthly,
+or annual basis. However, there is a larger issue in a portfolio of pairs that has not yet been addressed
+extensively. A pairs trading investment strategy involves trading on not just a single pair, but rather a
+large number number of pairs to maximize the expected number of trading opportunities. At any given
+time, some pairs will have convergence opportunities while others will not. Although a large number
+of pairs will increase the expected number of opportunities, it will do so with two costs: (i) transaction
+costs and (ii) covariance. The former is straightforward – there are two-way execution costs and slippage
+associated with each investment into a pair. The latter, which we will formalize later, is due to the fact
+that distinct pairs may share assets. Suppose for example, that there are two pairs of stocks (1,2) and (1,3).
+Although both are distinct pairs, they share in common stock 3, and consequently, the spreads for the
+pairs may have a positive covariance. In turn, this covariance will increase the risk of the overall portfolio
+by increasing its variance. With a very large number of pairs, we find that this has a significant impact on
+the risk-adjusted performance and draw-down of the investment strategy.
+1.1. Our Contribution
+One popular method of pairs selection is through cointegration, which involves testing whether the lin-
+ear combination of two time series is stationary (Enders 2004). In practice however, traders may neglect
+the covariance between asset pairs simply because any two given pairs are for the most part ineligible
+for a pairs investment strategy. However, conditional on the set of cointegrated pairs, we find that the
+
+===== PAGE 3 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+3
+covariance term makes a large impact downstream on the strategy performance. In order to reduce the
+covariance term, we propose techniques from graph theory such as matchings, to determine subsets of
+pairs with no common assets. We formally prove that the covariance from shared stocks in typical pair
+portfolio construction methods is substantial, and detrimental to the risk-adjusted performance. We then
+propose and implement a matching-based pair selection method to prevent the prior effect. To the best
+of our knowledge, this is the first instance in the literature in which the impact of covariance/variance in
+pairs trading portfolios is identified and in which a graphical matching-based approach is used to select
+pairs.
+1.2. Previous Work
+Most pairs trading literature is oriented around price-based signals. In the work of Gatev E. (2006), the
+authors select pairs by minimizing the distance between normalized stock prices, and conclude that gross
+profitability is linked to common factors between stocks. However, the authors also find that profits some-
+times exceed transaction cost estimates. An extension by Elliott R.J. (2004) uses the expectation maxi-
+mization (EM) algorithm to update a Gaussian Markov chain model for the pair spread. Other authors
+use timing, rather than critical price levels to identify opportunities. For example, Jurek J. (2007) shows
+opportunity in a learning approach, by using intertemporal hedging and methods of capturing mispricing
+to show there are critical levels in which profitability exists in the trade. Similarly, Liu J. (2012) show that
+conditioning on liquidation (or lack-thereof) on one asset of the pair can increase profitability through
+expected convergence. In the work of Avellaneda M. (2010), the authors use PCA-based trading strategies
+to show efficacy in ETF pairs trading as well as an enhancement using trading volume features.
+Another cohort of authors have explored pairs trading through the use of copula, which is a multi-
+variate cumulative distribution function such that the marginal probability of each variable is uniform
+in a [0, 1] measure, and are used to describe dependence between random variables. For example, Liew
+(2013) constructs conditional probabilities using the derivative of the copula of various distributions, and
+applies it as a trigger for traditional distance and and cointegration based approaches. On the other hand,
+
+===== PAGE 4 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+4
+Botha (2013) uses bivariate copula to identify confidence intervals for two highly correlated stocks’ resid-
+ual spread. For both approaches, although the copula is effective against the benchmark, the benefit is
+marginal, and consumed by transaction costs. In terms of initial trading universe, most prominent papers
+have used one of the various indices in the S&P 500. For example, Huck N. (2015) uses the S&P 500 to show
+that cointegration methods generally dominate distance-based methods, and similarly, Huck (2009) uses
+the S&P 100 to establish a ranking framework for pair selection. Pairs trading is not limited to equities,
+and is applicable to other asset classes. For example, Cummins M. (2012) using various statistical learn-
+ing algorithms to show profitability in traditional spread-trading on the crude oil and refinery product
+markets.
+2. Pairs Trading Background
+The traditional pairs trading framework has three main components: (i) identification, (ii) selection based
+on cointegration testing, and (iii) trading strategy. First, the identification of potential pairs involves select-
+ing tuples of assets whose prices may move together in short time intervals. In itself, this is a forecast,
+and can involve (i) identifying companies within a particular sector such as technology or health care, (ii)
+identifying companies impacted by the same risk factors, or even (iii) identifying companies who share
+supply chain commitment.
+The second component, selection based on cointegration, involves testing for a statistical property
+between the log prices of the two assets. The order of integration, I(d) of a time series is the minimum
+number of differences that must be carried out to obtain a covariance-stationary time series. Specifically,
+a time series is integrated of order d if (1 − L)dXt is a stationary process for some lag operator L. For
+example, if d = 0, and the time series is of order zero, then (1 − L)0Xt = Xt. With an understanding
+of order of integration, we can now define cointegration. For a pair of time series to be cointegrated,
+there are two requirements: (i) the log prices must be integrated with some order d (ii) the linear com-
+bination of the two time series must be integrated of order less than d. If these two conditions hold, the
+aforementioned linear combination, or spread is cointegrated. The most common test for cointegration is
+
+===== PAGE 5 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+5
+the Engle-Granger Two-Step Method, but there are several others including the Johansen test, Phillips-
+Ouliaris test, and Bayesian inference. A comprehensive overview of these methods can be found in Enders
+(2004).
+The third component, trading, involves tracking the spread between two or more assets and simultane-
+ously buying and selling it at outlier levels until it returns to equilibrium. The expectation of the spread is
+measurable over time, and can be used to represent the long-term equilibrium. Consequently, the distance
+from the equilibrium value can behave as a forecast if we believe there will be a convergence or return
+to the equilibrium value in the future. To act on the forecast, we can buy one of the assets and sell the
+other, effectively buying or selling the spread if it is below or above the equilibrium value. The position
+is profitable only if the spread reverts to its equilibrium level, so traders selectively enter and exit these
+spreads when they deviate sufficiently.
+3. Theoretical Analysis of Pairs Trading
+We will consider a portfolio consisting of both cointegrated and non-cointegrated pairs of stocks. To assess
+the portfolio’s performance and the efficacy of our strategy for selecting pairs, it’s crucial to understand the
+mean and variance of the returns of these pairs, along with the covariance among the returns of different
+pairs. In this section, we introduce simple models to represent the behavior of pairs in both cointegrated
+and non-cointegrated contexts. Following this, we will derive formulas for analyzing the returns. These
+formulas will be instrumental in evaluating the theoretical performance of various portfolio compositions,
+highlighting the benefits of our matching-based pair selection strategy compared to baseline methods.
+The proofs of the theoretical results in this section are provided in the Appendix.
+3.1. Cointegrated Pairs
+We will trade a pair involving stocks 1 and 2 which are cointegrated. The prices of the stocks at discrete
+time t are given by p1t and p2t. We assume the log-price for stock 1 follows a random walk. That is,
+log(p1,t+1) = log(p1t) +µ1 + δ1,t+1 (1)
+
+===== PAGE 6 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+6
+where µ1 is a constant mean term, and the noise terms δ1t are independent and identically distributed
+(i.i.d.) normal random variables with mean zero and standard deviation σ1. Because stocks 1 and 2 are
+cointegrated, their prices are related by
+ϵt = log(p2t) − log(p1t) (2)
+where ϵt are i.i.d. normal random variables with mean zero and standard deviationσ. We refer toϵt as the
+spread at time t. Trading a pair of stocks is based upon the value of the observed spread. To trade the pair,
+we choose a threshold kσ for some k > 0. The trading signal is given by
+St = 1 {ϵt ≤ −kσ} − 1 {ϵt ≥ kσ} . (3)
+This signal is negative if the spread is too low, meaning the price of stock 2 is too low relative to stock 1.
+In this case we want to sell stock 1 and buy stock 2. If the signal is positive then the spread is too high,
+meaning the price of stock 2 is too high relative to stock 1. In this case we want to buy stock 1 and sell
+stock 2. The return of stock i at time t + 1 is
+ri,t+1 = pi,t+1
+pit
+− 1
+and the return of the pair at time t + 1 is
+rt+1 = St(r2,t+1 − r1,t+1). (4)
+We have the following result for the mean and variance of the cointegrated pair returns.
+Theorem 1. Consider a cointegrated pair of stocks 1 and 2 with prices given by equations (1) and (2) traded
+using the signal given by equation (3), with returns given by equation (4). Let Z be a standard normal random
+variable. Then the pair return at time t has mean
+E[rt] = eµ1+σ2
+1 /2+σ2
+P(k − σ ≤ Z ≤ k + σ) (5)
+
+===== PAGE 7 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+7
+and variance
+Var(rt+t) =e2µ1+2σ2
+1 +4σ2
+(P(Z ≤ −k + 2σ) +P(Z ≥ k + 2σ))
+− 2e2µ1+2σ2
+1 +σ2
+(P(Z ≤ −k + σ) +P(Z ≥ k + σ))
++ 2e2µ1+2σ2
+1 P(Z ≥ k) − E2[rt]. (6)
+From this result, it can be shown that the mean return of a cointegrated pair is positive, which is why
+they provide a profitable trading opportunity. In fact, the mean is positive even if the drift µ1 is negative.
+This means that a pair of stocks whose prices have a negative drift can still be traded as a pair for a profit.
+Furthermore it can be shown that the mean return of the pair increases for larger standard deviations σ1
+and σ, which indicates that more volatile pairs are more profitable.
+We next consider stocks 1, 2, 3 and pairsa = (stock 1, stock 2) andb = (stock 1, stock 3). We assume each
+pair is cointegrated. Then the spreads of the two pairs can be written as
+ϵat = log(p2t) − log(p1t) (7)
+ϵbt = log(p3t) − log(p1t). (8)
+The spreads ϵat and ϵbt have zero mean and standard deviations σa and σb, respectively. The signal for
+each pair is
+Sat = 1 {ϵat ≤ −kσa} − 1 {ϵat ≥ kσa} (9)
+Sbt = 1 {ϵbt ≤ −kσb} − 1 {ϵbt ≥ kσb} . (10)
+The returns of the spreads are
+ra,t+1 = Sat(r2,t+1 − r1,t+1) (11)
+rb,t+1 = Sbt(r3,t+1 − r1,t+1) (12)
+The sharing of stock 1 between the two pairs creates a positive covariance between the returns. The
+following result gives an expression for this covariance.
+
+===== PAGE 8 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+8
+Theorem 2. Consider stocks 1, 2, and 3 with prices given by equations (1), (7), and (8). Define the pairs a=
+(stock 1, stock 2) and b = (stock 1, stock 3). Assume the pairs are traded using the signals given by equations
+(9) and (10), with returns given by equations (11) and (12). Then the covariance of the returns of the pairs at
+time t is
+Cov(ra
+t , rb
+t) =
+
+eσ2
+1 − 1
+
+E[rat]E[rbt]. (13)
+Because the mean returns of cointegrated pairs are positive, Theorem 2 shows that the returns of two
+pairs which share a common stock will have a positive covariance.
+3.2. Non-Cointegrated Pairs
+We next study the statistics of the returns of pairs which are not cointegrated. In this case we assume the
+log-price for each stock i follows an independent random walk. That is,
+log(pi,t+1) = log(pit) +µi + δi,t+1 (14)
+where µi is a constant mean term, and the noise termsδit are i.i.d. normal random variables with mean zero
+and standard deviation σi. Unlike with cointegrated stocks, here each stock i follows a log-normal model
+with independent noise terms and there is no cointegration relationship such as that given by equation
+(2). Assume the pair is (stock 1, stock 2). We define the spread of the pair at time t as
+ϵt = log(p2t) − log(p1t) − (µ2 − µ1)t. (15)
+By subtracting the mean price difference (µ2 − µ1)t, the spread becomes a zero mean normal random
+variable with variance σ2 = t(σ2
+1 + σ2
+2). The trading signal is given by equation (3) and the pair return is
+given by equation (4). We have the following results for the mean and variance of the returns of a pair
+that is not cointegrated.
+
+===== PAGE 9 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+9
+Theorem 3. Consider a non-cointegrated pair of stocks 1 and 2 with prices given by equations (14), spread
+given by equation (15), traded using the signal given by equation (3), with returns given by equation (4). Let
+Z be a standard normal random variable. Then the pair return at time t has mean
+E[rt] = 0
+and variance
+Var(rt) = 2P(Z ≥ k)
+
+e2µ1+2σ2
+1 + e2µ2+2σ2
+2 − 2eµ1+µ2+σ2
+1 /2+σ2
+2 /2
+
+.
+From this we see that trading a non-cointegrated pair gives zero profit on average.
+We next consider stocks 1, 2, 3 and pairsa = (stock 1, stock 2) and b = (stock 1, stock 3). Call these pairs
+a and b, and assume each pair is not cointegrated. Then the spreads of the two pairs can be written as
+ϵat = log(p2t) − log(p1t) − (µ2 − µ1)t. (16)
+ϵbt = log(p3t) − log(p1t) − (µ3 − µ1)t. (17)
+The spreadsϵat and ϵbt have zero mean and varianceσ2
+a = t(σ2
+1 +σ2
+2) and σ2
+b = t(σ2
+1 +σ2
+3), respectively. The
+signal and returns for the pairs follow the same expressions as for the cointegrated pairs. The following
+result gives an expression for the covariance of the returns of these two non-cointegrated pairs.
+Theorem 4. Consider stocks 1, 2, and 3 with prices given by equations (14). Define the pairs a= (stock 1, stock
+2) and b = (stock 1, stock 3). Let the spreads for each pair be given by equations (16) and (17). Assume the
+pairs are traded using the signals given by equations (9) and (10), with returns given by equations (11) and
+(12). Define Za and Zb as zero mean jointly normal random variables with covariance matrix
+Σ =
+
+
+1
+σ2
+1√
+(σ2
+1 +σ2
+2 )(σ2
+1 +σ2
+3 )
+σ2
+1√
+(σ2
+1 +σ2
+2 )(σ2
+1 +σ2
+3 )
+1
+
+ .
+Then the covariance of the returns of pairs a and b at time t is
+Cov(ra
+t , rb
+t) =2
+
+P
+
+Za ≥ k
+\
+Zb ≥ k
+
+− P
+
+Za ≥ k
+\
+Zb ≤ −k
+
+×
+
+eµ2+µ3+σ2
+2 /2+σ2
+3 /2 − eµ1+µ3+σ2
+1 /2+σ2
+3 /2 − eµ1+µ2+σ2
+1 /2+σ2
+2 /2 + e2µ1+2σ2
+1
+
+.
+
+===== PAGE 10 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+10
+3.3. Theoretical Portfolio Performance
+With the results for the mean, variance, and covariance of various types of pairs, we can now compare the
+performance of different pair portfolios. In practice, a cointegration test is applied to a universe of pairs.
+This test produces a p-value, indicating whether or not the pair is cointegrated. Then all pairs which have a
+p-value lower than a fixed threshold are included in the portfolio. We refer to this as thebaseline portfolio.
+This portfolio may contain pairs which are cointegrated, but it may also contain pairs which are not, but
+have p-values below the threshold by chance. The pairs universe is large, so many such false positives can
+occur. For instance, for the S&P 500, there are 500 stocks, which gives 125,000 possible pairs. If all pairs were
+not cointegrated, a portfolio built from a p-value threshold of 0.01 with no multiple-hypothesis testing
+correction would contain approximately 1,250 non-cointegrated pairs. Our other portfolio is referred to
+as a matching portfolio. This portfolio selects the pairs using a matching algorithm so that the final pairs
+in the portfolio do not share any common stocks. This portfolio can contain a maximum of 250 pairs for
+the S&P 500.
+For the baseline portfolio we assume 250 pairs are selected for trading based on their p-values. Each pair
+is traded using a threshold set by k = 2. For each portfolio, we assume a unit amount is invested in each
+pair. To further simplify our analysis, we will assume all daily log-normal price changes have the same
+mean µ1 and noise standard deviation σ1, and all cointegrated spreads have the same standard deviation
+σ.
+For each portfolio, we assume it has n1 = 1 cointegrated pair and n2 non-cointegrated pairs. We also
+assume that there are m1 pairs of cointegrated pairs that share at least one stock and m2 pairs of non-
+cointegrated pairs that share at least one stock. We do not assume any stocks are shared between cointe-
+grated and non-cointegrated pairs.
+The mean return of a single cointegrated pair at time t is denoted µc and the portfolio return at time t
+is denoted Rt. The mean return of the portfolio is given by E[Rt] = n1µc. We see that the only contribu-
+tors to the mean return are the n1 cointegrated pairs. To compute the portfolio variance, we define four
+different terms. Let ν1 be the variance of a single cointegrated pair, ν2 be the variance of a single non-
+cointegrated pair, κ1 be the covariance of a pair of cointegrated pairs that share a common stock, and κ2
+
+===== PAGE 11 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+11
+be the covariance of a pair of non-cointegrated pairs that share a common stock. The portfolio variance is
+given by Var(Rt) = n1ν1 + n2ν2 + 2m1κ1 + 2m2κ2. We assume the covariance is zero between any pairs
+which do not share a common stock.
+To compare the performance of these portfolios, we estimate values for the different parameters using
+data and compute all moments using Theorems 1, 2, 3, and 4. We estimated the mean and variance for
+the daily change in log-prices of all stocks on the S&P 500 using price data from 2010 to 2023. We took
+the medians of these values across all stocks to obtain µ1 and σ2
+1. To estimate the spread variance for
+cointegrated pairs, we looked at all pairs in the S&P 500 from January 2021 to August 2023. We did a linear
+regression of the log prices of each pair and measured the variance of the regression residual. We then
+performed a single-lag augmented Dickey-Fuller test on the residuals to obtain their p-value for being
+cointegrated. This is was repeated once for every month. Details on this procedure are found in Section
+4.2. We kept the variance for the 250 pairs with the lowest p-value each month. We then took the median
+value of this set of variances across all stocks and months in our dataset to obtain σ2. The values for µ1,
+σ1, and σ are shown in Table 1.
+The matching portfolio has m1 = m2 = 0 and the baseline portfolio has m1 = 0. To obtain m2 for the
+baseline portfolio, we look at the monthly portfolios of the 250 pairs with the smallest p-values in the
+S&P 500 from January 2021 to August 2023. We calculate the number of pairs of pairs each month that
+share a common stock, and take the median of these values across all months to obtain m2 = 1, 748. To
+get a sense for the magnitude of this value, we consider the case where pairs are chosen at random. In
+this case, a portfolio with 250 pairs can be viewed as a random graph on 500 nodes with 250 edges. We
+can approximate this graph as an Erdos-Renyi graph G(n, p) with n = 500 and p = 0.002 (we set p equal
+to the number of edges divided by the total number of possible edges on 500 nodes). Every edge on this
+graph is a pair in the portfolio, and every two-hop path on this graph corresponds to a pair or pairs that
+share a common stock (the node in the middle of the path is the shared stock). Therefore, m2 is equal to
+the number of such two-hop paths. This can easily be estimated using results from random graph theory
+(Bollobás 2001). Every triplet of nodes with at least two edges contributes three such paths, and each of
+
+===== PAGE 12 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+12
+these triplets exists with probability p2. To obtain the mean number of such paths we multiply 3p2 by
+the number of triplets, which gives 3p2n(n − 1)(n − 2)/6. Substituting p = 0.002 and n = 500 into this
+expression, we get that the mean number of pairs of pairs sharing a common stock is 249.5. This is nearly
+seven times smaller than the value seen in the data. This suggests two things. First, pairs with low p-
+values tend to aggregate around a few stocks. Second, the contribution to the baseline portfolio’s variance
+from pairs which share a pair is much larger than predicted by random graph theory. Because of these
+reason, we expect that the matching portfolio should have a much better risk adjusted performance than
+the baseline portfolio.
+Table 1 shows the theoretical annualized Sharpe ratios of the two portfolios. We see that the Sharpe
+ratio of the matching portfolio is much higher than the baseline. Most of this difference comes from the
+covariance of the pairs with shared stocks, which represents 50% of the variance in the baseline port-
+folio. This covariance term does not exist in the matching portfolio, producing a much lower portfolio
+variance. This implies that matching-based pair selection significantly reduces the variance of the pair
+portfolio relative to the baseline by avoiding pairs sharing stocks. We will see in Section 5 that the perfor-
+mance improvement of the matching portfolio predicted by our theory is close to what is seen in trading
+simulations.
+4. Constructing and Trading a Matching Pairs Portfolio
+We have seen with simple analysis that there is substantial improvement in risk-adjusted portfolio per-
+formance in using matching-based pair selection versus a baseline approach based only on p-values of
+cointegration tests. We now show how to construct a pairs portfolio using matchings and trade the result-
+ing pairs. Our approach first selects the pairs for the portfolio at the beginning of a trading period, and
+then trades these pairs for the duration of the period.
+4.1. Portfolio Construction
+We construct the portfolio of pairs of stocks using a given universe of stocks. Let the pair a be given by
+stocks i and j. For each pair a in the set of all stock pairs, we perform a linear regression of the log-prices
+of the stocks using historic data:
+
+===== PAGE 13 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+13
+Parameter Description Parameter Baseline Matching
+Portfolio Portfolio
+Daily log-price change mean µ1 0.0005 0.0005
+Daily log-price change std. dev. σ1 0.0180 0.0180
+Spread std. dev. σ 0.0711 0.0711
+Trading threshold k 2 2
+Number of cointegrated pairs n1 1 1
+Number of non-cointegrated pairs n2 249 249
+Number of pairs of cointegrated pairs m1 0 0
+sharing a common stock
+Number of pairs of non cointegrated pairs m2 1,748 0
+sharing a common stock
+Annualized Sharpe ratio 0.50 1.18
+Table 1 Parameter values used to evaluate performance of baseline and matching pairs portfolios.
+log(pjt) = µa + βa log(pit) +ϵat. (18)
+This regression allows us to estimate the regression coefficients βa and µa for the pair, along with the
+variance of the residual ϵat, which we denote as σ2
+a. The residual of the regression is the pair spread that
+we use for trading. To assess whether the pair is cointegrated, we conduct a single-lag Augmented Dickey-
+Fuller (ADF) test on the spread, calculating the resultant t-statistic and p-value. This process is repeated
+for each pair.
+After computing the t-statistic of the ADF test for each pair, we construct a graph where the nodes are
+the stocks, the edges are the pairs, and the edge weights are the negative of the t-statistic. We refer to this
+as the pairs graph. We use the negative of the t-statistic for the edge weight so that pairs that are more
+strongly cointegrated have a larger edge weight. The pairs graph is fully connected and represents all
+
+===== PAGE 14 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+14
+the possible pairs and their level of cointegration. We would like to select pairs that have a very negative
+t-statistic, indicating strong cointegration. This corresponds to edges in the graph with large weight. A
+portfolio consisting of a set of pairs can be represented as the subgraph of the pairs graph induced by the
+edges corresponding to these pairs. We refer to this as theportfolio graph. Two-hop paths in the portfolio
+graph represent pairs of pairs that share a stock. We would like to eliminate these types of pairs to reduce
+the portfolio variance, while also choosing pairs with large weight so they are likely to be cointegrated and
+give a positive return. This translates to a portfolio graph where there are no two-hop paths and the sum
+of the edge weights in maximized. Such a graph can be obtained by finding a maximum weight matching
+on the pairs graph.
+A matching is defined as a subgraph of a given graph in which each node is connected by at most one
+edge, ensuring that no two edges share a node. Among various types of matchings, a maximum weight
+matching is one where the total sum weights of the edges are maximized. There are a variety of algorithms
+that exist for finding maximum weight matchings on graphs. Further details on such algorithms can be
+found in Edmonds (1965) and Galil (1986).
+To select the pairs for the matching portfolio, we construct a maximum weight matching on the pairs
+graph. Note that if there aren stocks, only n/2 pairs will be selected (assumingn is even). Therefore, there
+is an upper bound on the number of pairs in a matching portfolio. We also note that while two stocks
+may form a highly cointegrated pair, this pair may not be selected because the maximum weight matching
+might select one or both of the stocks for two other pairs, so long as the sum of the weights is maximized.
+This shows the potential complexity in constructing the matching portfolio.
+One may be tempted to think that simply selecting the pairs with the most negative t-statistic would
+be a good way to build a portfolio. This is the baseline portfolio discussed in Section 3.3. However, if this
+approach was taken, the resulting portfolio would have a large number of pairs of pairs sharing stocks.
+To illustrate this, we consider two portfolios of equal size. One is a baseline portfolio formed from the
+pairs with the most negative t-statistic (and subsequently lowest p-value) based on two years of data
+from the S&P 500 from November 3rd, 2015 to November 3rd, 2017. The second is a matching portfolio
+
+===== PAGE 15 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+15
+constructed using the same pairs data. Both portfolios have the same number of pairs, but have very
+different structures. We show the two graphs in Figure 1. We can clearly see that the baseline portfolio has
+many two-hop paths, even though it has the same number of edges as the matching graph. In fact,there is
+a stock in the baseline portfolio that is a part of 15 pairs. In contrast, the matching portfolio contains only
+isolated edges and no two-hop paths. All stocks in this portfolio are only in one pair. This shows that by
+just selecting highly cointegrated pairs without utilizing any matching algorithm, one is likely to end up
+with a portfolio with a large variance due to the presence of many pairs sharing stocks.
+Figure 1 Portfolio graphs for (left) a baseline portfolio and (right) a matching portfolio, each with equal number of edges.
+4.2. Pairs Trading
+After selecting pairs for the portfolio, we trade them throughout the duration of the trading period. The
+trading strategy for each pair in the portfolio is as follows. On each trading day, we calculate the regression
+of the log-prices as per equation (18), using a fixed-size historical data window leading up to that day.
+We then obtain the day’s residual from this regression and standardize it by dividing by the regression’s
+estimated variance, obtaining a z-scored spread. To limit the influence of extreme outliers, this z-scored
+spread is winsorized at the -3 and 3 thresholds. The trading signal, as defined by equation (3), employs
+this winsorized spread in lieu of the original spread. We select a specific value fork to generate the signal.
+
+===== PAGE 16 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+16
+The trading methodology based on this signal adheres to the framework outlined in Section 3 with a small
+modification. The regression produces a coefficient βa which relates returns of stocks i and j. Typically
+this value is near one, but if it deviates from one, we must modify how we allocate capital to the two
+stocks. For a pair a comprising stocks i and j, where the residual ϵat is calculated as per equation (18), a
+signal of +1 prompts the purchase of stock i with βa dollars and the short-selling of one dollar of stock
+j. Conversely, a signal of -1 leads to the purchase of one dollar of stock of j and the short-selling of βa
+dollars of stock i. A zero signal indicates no position is taken in either stock.
+One potential draw-back of this z-scored signal is that the underlying regression may be very sensitive
+to outliers. For example, with a very large estimated standard deviation (due to a single outlier) in the
+denominator, the z-score may not qualify for an otherwise appropriate pair trade. To overcome this sen-
+sitivity, we propose a q-score that relies on only quantiles of the residual distribution. Let τk(ϵat) be the
+kth quantile of the residuals of the regression at timet. Then we define the q-score of the residual for pair
+a at time t as
+qat = ϵat − τ50(ϵat)
+τ75(ϵat) − τ25(ϵat) (19)
+The numerator subtracts the median from the spread at time t, and the denominator is the difference
+between the 75th and 25th quantiles of the residuals. Because only quantiles are used, the q-score provides
+a measure of deviation that is robust to outliers.
+Another modification we make to the signal is how we determine the weight of the position in the
+portfolio. The unnormalized position weight is the absolute value of the signal. For the z-score signal
+given by equation (3), each pair had an equal weight. However, if the spread is very far from zero, this
+presents an opportunity for a higher return when the spread mean-reverts. Therefore, we would want to
+have a larger weight in the portfolio for pairs whose residual is far from zero. To achieve this, we define
+the following modified signal based on the q-score:
+Sq
+at = (−1 {qat ≤ 0} + 1 {qat ≥ 0}) [|qat|]. (20)
+
+===== PAGE 17 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+17
+where [|qat|] means round the absolute value ofqat to the nearest integer. The rounding prevents any trade
+from occurring if the q-score is too small (in particular if it is between -0.5 and 0.5). This was achieved
+in the z-score by explicit selection of the threshold k. In addition to the prevention of trading on small
+spreads, we also find that the rounding leads to good performance in the trading simulations shown in
+Section 5. This q-score based signal has the same long and short behavior as the z-score signal, except
+now the absolute value of the signal is proportional to the absolute value of the q-score. This allows for
+greater weight on pairs where the spread is far from zero.
+5. Results
+In this section we discuss the implementation of our matching-based pairs trading strategy and the asso-
+ciated performance results. First, we define the various trading strategies and performance metrics we uti-
+lize. Then, we describe the details of our trading simulations. Finally, we present the performance results.
+The relevant code and data utilized in this section can be found in (GitHub. 2023).
+We use a combination of metrics measured before (ex-ante) and after (ex-post) realizing the trading
+performance. Ex-post metrics concern the actual performance of the portfolio, while ex-ante metrics help
+us understand the differences in the properties of the portfolios for different trading strategies. For ex-
+post metrics, we consider the cumulative returns of the strategies benchmarked to the S&P 500. We also
+consider risk-adjusted measures of the returns such as the Sharpe ratio and Sortino ratio. The Sharpe ratio
+measures the ratio between mean returns and standard deviation of returns (Sharpe 1994). The Sortino
+ratio measures the ratio between mean returns and standard deviation of negative returns, and captures
+downside risk (Sortino and Price 1994). For both measures, a higher value indicates a higher return per unit
+of risk. Another important measure we consider is the drawdown, which is the largest drop in cumulative
+returns between peak and trough over the investigated time period. This metric is commonly used by fund
+managers to account for periodic under-performance and recovery duration (Choi 2021). We also consider
+the single worst and best day of returns.
+For ex-ante metrics, we focus on asset turnover, retention, and concentration within the portfolio. Asset
+turnover is critical because frequent entries and exits from positions may incur substantial trading costs.
+
+===== PAGE 18 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+18
+Retention addresses the portfolio’s diversity in terms of its holdings over time, aiming for low retention to
+reduce the risk associated with holding a particular pair for an extended period. Concentration measures
+the maximum frequency of a single stock’s appearance in the portfolio, where a high concentration level
+could significantly increase the portfolio’s vulnerability to single stock risk.
+5.1. Trading Simulation
+Our trading simulations utilize historical price data for stocks on the S&P 500 (SPGlobal 2020) between
+January 2017 and May 2023 adjusted for both dividends and stock splits (Yahoo 2023). We update the pairs
+in the portfolio once a month, using whatever pair selection method we are testing. Then for the duration
+of the month we trade those pairs using one of the approaches described in Section 4.2. To compute the
+pair regressions for both selection and trading we use two years of historical data. This window size is
+commonly used in the pairs trading literature (Gatev E. 2006, Vidyamurthy 2004). Daily trading is done
+using a sliding two-year window to compute the spreads.
+To account for trading costs, which can be significant when considering market impact and transaction
+costs (Do and Faff 2012), we use the following approach. We model the annual transaction costs for each
+stock at 1%, translating to a daily fee of 1%/252 days = 0.00397%, consistent with the findings in SEC
+(2019). When trading occurs for a pair, the daily net returns are the gross returns minus this transaction
+fee.
+We utilize two different approaches to select the pairs for the portfolio. One is the matching approach
+described in Section 4.1 which utilizes a maximum weight matching. The second is a baseline approach
+where we sort the pairs by their p-values, and select the top 250 pairs for the feasible pair universe. By
+selecting only 250 pairs, we are able to compare the matching and baseline approaches while controlling
+for the number of pairs in the portfolio. For trading the pairs, we compare the z-score signal in equation
+3 and the q-score signal in equation 20.
+5.2. Returns
+We begin by analyzing the returns of the different pairs trading strategies. We denote the pairs selection
+strategies as either M (matching) or B (baseline), and we denote the trading signal as Z (z-score) or Q
+
+===== PAGE 19 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+19
+2017 2018 2019 2020 2021 2022 2023
+0
+20
+40
+60
+80
+100
+120Returns (%)
+Matching (Q-Score)
+Matching (Z-Score)
+Baseline (Q-Score)
+Baseline (Z-Score)
+SP500
+2017 2018 2019 2020 2021 2022 2023
+40
+20
+0
+20
+40
+60
+80
+100
+120Returns (%)
+Matching (Q-Score)
+Matching (Z-Score)
+Baseline (Q-Score)
+Baseline (Z-Score)
+SP500
+Figure 2 (right) Gross and (left) net cumulative returns (accounting for fixed transaction costs) of the different trading
+strategies.
+(q-score). We plot the cumulative gross and net returns in Figure 2. We see that all of the strategies had
+positive gross returns. The baseline approaches (BQ and BZ) returned 18% and 38%, while the matching
+approaches (MQ and MZ) returned 75% and 74%. For reference, in this period the S&P 500 returned 88%. We
+also plot the net returns (calculated using the procedure described in Section 5.1) in Figure 2. The matching
+approaches still outperform the baseline approaches, which end up having negative returns when factoring
+in transaction costs. Overall, the matching approaches returned near 66%, while the baseline approaches
+returns -26.15% and -13.40%. This exemplifies that turnover considerations are essential to the design of
+a pairs trading strategy since the baseline actually becomes unprofitable when realistic transaction costs
+are taken into account.
+We summarize a variety of performance metrics for the different strategies in Tables 2 and 3. The net
+annualized returns of the matching-based strategies are 7.64% and 7.25%, slightly below the S&P 500’s
+value of 10.79%. However, while the matching approaches achieved slightly lower returns compared to
+the market, they stood out due to their superior risk-adjusted performance. We see that the S&P 500 had
+a Sharpe ratio of 0.59, while matching approaches both had a Sharpe ratio of 1.23 and Sortino ratios of
+1.69 and 1.78 based on gross returns. Furthermore, the S&P 500 experienced much larger single-day losses.
+For example, the S&P 500 experienced a -11% return on a single day, where as the matching approaches
+never exceeded -5%. On a cumulative basis, the S&P 500 experienced a -19.49% drawdown, while all pairs
+
+===== PAGE 20 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+20
+Table 2 Performance metrics for the different trading strategies based on gross returns.
+MQ MZ BQ BZ S&P 500
+Gross Sharpe ratio 1.23 1.23 0.34 0.48 0.59
+Gross Sortino ratio 1.78 1.69 0.44 0.67 0.70
+Gross cumulative returns (%) 73.65 74.87 17.96 38.30 88.25
+Gross annualized returns (%) 8.40 8.42 2.49 5.13 10.79
+Minimum gross single day return (%) -3.81 -4.16 -3.93 -4.63 -10.94
+Maximum gross single day return (%) 4.20 4.13 3.49 4.99 9.06
+Skew 1.12 0.83 -0.28 0.04 -0.55
+Drawdown (%) -7.99 -8.30 -6.94 -8.48 -19.49
+trading approaches had drawdowns that did not exceed -8.48%. This analysis indicates that matching-
+based pairs trading not only offers returns comparable to the market, but does so with considerably lower
+risk, even surpassing market performance in bearish years like 2022. Interestingly, the Sharpe ratios for
+both the baseline and matching portfolios closely align with the theoretical values presented in Table 1,
+underscoring the accuracy of our theoretical framework.
+We also see differences in the performance of the two trading signals. While the q-score signal has a
+slightly lower annualized return than the z-score signal, it does mitigate the minimum single day return
+and drawdown. This indicates that the q-score signal may offer protection against large losses at the cost
+of slightly lower returns.
+We next considered the correlation of the gross returns between the various trading strategies in Table
+4. We find that the strategies show strong correlations with each other, but all have a slightly negative
+correlation with the S&P 500. This may indicate that pairs trading strategies behave contrarian to market
+growth, and can actually be profitable when the market is falling. The S&P 500 had lower risk adjusted
+returns than the matching-based strategies. Furthermore, during periods of drawdown in the S&P 500
+such as COVID-19 and the Russian invasion of Ukraine, amongst others, the matching-based strategies
+outperformed the market. For example, during March 2020 the S&P 500 returned -35% while the matching
+
+===== PAGE 21 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+21
+Table 3 Performance metrics for the different trading strategies based on net returns.
+MQ MZ BQ BZ S&P 500
+Net Sharpe ratio 1.12 1.12 -0.49 -0.13 0.59
+Net Sortino ratio 1.63 1.55 -0.64 -0.18 0.70
+Net cumulative returns (%) 64.73 66.34 -26.15 -13.40 88.25
+Net annualized returns (%) 7.64 7.25 -4.11 -1.65 10.79
+Minimum net single day return (%) -3.82 -4.17 -4.01 -4.67 -10.94
+Maximum net single day return (%) 4.18 4.13 4.90 3.44 9.06
+Skew 1.12 0.82 -0.31 0.03 -0.55
+Drawdown (%) -8.00 -8.30 -6.90 -8.40 -19.49
+approach returned 15%. During another bearish period in 2022, the S&P 500 returned -18% while the
+matching approach returned 10%.
+MQ MZ BQ BZ S&P 500
+MQ 1.00 0.91 0.50 0.35 -0.27
+MZ 0.91 1.00 0.51 0.37 -0.25
+BQ 0.50 0.51 1.00 0.68 -0.17
+BZ 0.35 0.37 0.68 1.00 -0.14
+S&P 500 -0.27 -0.25 -0.17 -0.14 1.00
+Table 4 The correlation of returns between four different trading strategies and the S&P 500.
+5.3. Asset Turnover and Retention
+One important consideration in executing trading strategies is the cost of entry and exit into a position.
+With excessive trading, execution costs increase, resulting in performance degradation. Consequently,
+investment managers prefer strategies with lower turnover that require fewer trades. We defineturnover,
+
+===== PAGE 22 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+22
+∆(t) in time period t as the sum of the absolute difference of positions for each asset in time periodst − 1
+and t for each asset. If we define xj(t) as the position at time t in asset j in portfolio U, the the turnover
+is
+∆(t) =
+X
+j∈U
+|xj(t) − xj(t − 1)|. (21)
+We show the distribution of the average monthly turnover for the baseline and matching methods in
+Figure 3 based on the q-score signal. The matching method has a median turnover one third as large as
+the baseline method. This higher turnover for the baseline method is a major factor in the reduction of
+net returns that we observed in Figure 2. In contrast, the matching method trades much less frequently, is
+not penalized as severely by transaction costs, and ends up being profitable.
+Matching Baseline
+Method
+50
+100
+150
+200
+250Average Turnover (%)
+Figure 3 Boxplot of the average monthly turnover for the matching and baseline portfolios using the q-score signal.
+Another important consideration is the diversity of the portfolios over time. In our trading strategies,
+we update the traded pairs on a monthly basis. Suppose for example, that the portfolio contained the
+same pairs each month. This may imply that the portfolio construction method is flawed because no real
+
+===== PAGE 23 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+23
+selection is being carried out. This also exposes the portfolio to greater risk from holding the pair too long.
+To quantify this concept of diversity, we measure the similarity of two portfolios using the Jaccard index
+(Jaccard 1901). Formally, for a given pair selection strategy U, we define the set of pairs in the portfolio
+at time period t as U(t). We then define the retention at time t as the Jaccard index between portfolios in
+consecutive update periods, which is given by
+J(U(t), U(t − 1)) = |U(t) ∩ U(t − 1)|
+|U(t) ∪ U(t − 1)| . (22)
+This coefficient is equal to one if the two portfolios are identical and zero if they are completely disjoint.
+We show the historical retention of the matching and baseline strategies in Figure 4. We see that the
+matching method consistently has a low retention, implying a higher diversity than the baseline method.
+We also see that the retention fluctuates a great deal for the baseline method. This indicates that it is very
+inconsistent, with some periods having very stable portfolios while other periods having very different
+portfolios.
+2017 2018 2019 2020 2021 2022 2023
+Date
+0
+20
+40
+60
+80
+100% Retention
+Matching
+Baseline
+Figure 4 Plot of the monthly pair retention versus time for the baseline and matching portfolios.
+
+===== PAGE 24 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+24
+5.4. Concentration
+An additional benefit of the matching approach is that it prevents single-stock concentration, which is a
+concern for managing idiosyncratic risk (Goyal A. 2003). Single-stock risk is an important consideration
+within active portfolio management, and managers are often required the abide by strict single-stock expo-
+sure constraints (Grinold R. 2000). In the baseline approach, it is possible that a specific stock is selected
+for multiple pairs, resulting in a significant increase in exposure to idiosyncratic risk. This exposure could
+be particularly high when the stock goes through a corporate action event such as earnings or manage-
+ment change, and every pair containing it would have an abnormal residual. With the matching approach
+on the other hand, each stock is selected only once, and the single-stock risk is limited to a single pair.
+To formalize this, we define the concentration of a portfolio as the maximum number of pairs in which
+any single stock appears. Within the context of the portfolio graph, this is the same as the maximum
+degree among all nodes in the graph. The matching method has a concentration of one by construction.
+We plot the concentration of the baseline method in Figure 5. The average concentration is 10.2, but the
+concentration fluctuates quite a bit and can exceed 100. We see that the baseline method can often choose
+many pairs that share the same stock. This is a result of the pairs selection criteria which is based on the
+p-value of a cointegration test. The high concentration likely arises due to a small set of stocks having
+strong cointegration at any given time.
+6. Conclusion
+In this study, we have demonstrated the advantages of employing a matching-based selection method
+for pairs trading, in contrast to traditional approaches that rely solely on the significance of cointegra-
+tion tests for pair selection. The latter can result in portfolios overly concentrated in a limited number
+of stocks, which elevates portfolio variance and diminishes risk-adjusted returns. Our analysis includes
+analytical expressions for the mean and variance of returns for portfolios composed of both cointegrated
+and non-cointegrated pairs. We leveraged these expressions to illustrate that a matching-based approach
+significantly mitigates portfolio variance when compared to conventional strategies. Trading simulations
+corroborate our theoretical findings, revealing that matching-based pairs trading not only delivers robust
+
+===== PAGE 25 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+25
+2017-01-032017-10-182018-08-062019-05-232020-03-102020-12-292021-10-142022-08-05
+Date
+0
+20
+40
+60
+80
+100Concentration
+Figure 5 Plot of the single-stock concentration versus time for the baseline portfolio.
+risk-adjusted performance but also achieves annualized returns comparable to the S&P 500 with a superior
+Sharpe ratio.
+A unique aspect of our methodology is the application of graph theory to the selection of stock pairs.
+By conceptualizing pairs portfolios as graphs, we unveil strategies to decrease variance through opti-
+mal matchings. Our method assigns the t-statistic from a cointegration statistical test as the weight for
+the edges. Furthermore, while we opted for a maximum weight matching, exploring alternative weight-
+ing schemes or selection criteria, such as excluding pairs with weak cointegration, presents intriguing
+avenues for enhancing the selection process. One could also explore a variant of pairs trading that encom-
+passes cointegration among multiple stocks, transforming the concept of a pair into a tuple and evolving
+the portfolio graph into a hypergraph. Our matching-based strategy can very naturally to extend to this
+hypergraph version of pairs trading, facilitating the creation of low variance portfolios for more complex
+notions of pairs. Therefore, this graph-theoretical approach to pairs trading paves the way for numerous
+innovative modifications to the pairs trading methodology.
+References
+Lee J.H. Avellaneda M. Statistical arbitrage in the us equities market. Journal of Derivatives and Hedge Funds , 2010.
+
+===== PAGE 26 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+26
+Béla Bollobás. Random Graphs. Cambridge University Press, Cambridge, 2 edition, 2001.
+et. al. Botha. Trading strategies with copulas. Quantitative Finance, 2013.
+Jaehyung Choi. Maximum drawdown, recovery, and momentum. Journal of Risk and Financial Management , 14(11):
+542, 2021.
+Bucca A. Cummins M. Quantitative spread trading on crude oil and refined products markets. Quantitative Finance,
+2012.
+Binh Do and Robert Faff. Are pairs trading profits robust to trading costs? Journal of Financial Research , 35(2):
+261–287, 2012.
+Jack Edmonds. Paths, trees, and flowers. Canadian Journal of mathematics , 17:449–467, 1965.
+et al. Elliott R.J. Pairs trading. Quantitative Finance, 5:271–276, 2004.
+W. Enders. Cointegration and error-correction models. Wiley, 2004.
+Z. Galil. Efficient algorithms for finding maximum matching in graphs. ACM Computing Surveys, 1986.
+Rouwenhorst K.G. Gatev E., Goetzmann W.N. Pairs trading: Performance of a relative value arbitrage rule. The
+Review of Financial Studies , 2006.
+Qureshi GitHub. Github. https://github.com/kai-trading-bot/pair/, 2023. Accessed: 2023-04-
+30.
+Santa Clara P. Goyal A. Idiosyncratic risk matters! Journal of Finance, 2003.
+Kahn R.N. Grinold R. Active Portfolio Management. McGraw-Hill, 2000.
+Huck. Pairs selection and outranking: An application to the s and p 100 index. European Journal of Operational
+Research, 2009.
+Afawubo K. Huck N. Pairs trading and selection methods: is cointegration superior? Applied Economics, 2015.
+P. Jaccard. Étude comparative de la distribution florale dans une portion des alpes et des jura. Bulletin de la Société
+vaudoise des sciences naturelles , 37, 1901.
+Yang H. Jurek J. Dynamic portfolio selection in arbitrage. EFA 2006 Meetings Paper, 2007.
+Liew. Pairs trading: A copula approach. Journal of Derivatives and Hedge Funds , 2013.
+
+===== PAGE 27 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+27
+Timmermann A. Liu J. Optimal convergence trade strategies. Review of Financial Studies , 2012.
+SEC. How fees and expenses affect your investment portfolio, 2019. URL https://www.sec.gov/oiea/
+investor-alerts-bulletins/ib-fees-expenses .
+William F Sharpe. The sharpe ratio, the journal of portfolio management. Stanfold University, Fall, 1994.
+Frank A Sortino and Lee N Price. Performance measurement in a downside risk framework.the Journal of Investing,
+3(3):59–64, 1994.
+SPGlobal. Spglobal. https://www.spglobal.com/en/, 2020. Accessed: 2023-04-30.
+G. Vidyamurthy. Pairs Trading, Quantitative Methods and Analysis . Wiley, 2004.
+Yahoo. Yahoo finance. https://finance.yahoo.com/, 2023. Accessed: 2023-04-30.
+7. Appendix
+7.1. Proof of Theorem 1
+We prove here the results of Theorem 1 for the mean and variance of a cointegrated pair. We assume the
+cointegrated pair consists of stocks 1 and 2, and using the definition of the spread and log-normal price
+model for stocks 1, we can write the return of each stocks at time t + 1 as
+r1,t+1 = eµ1+δ1,t+1 − 1
+r2,t+1 = eµ1+δ1,t+1+ϵt+1−ϵt − 1.
+The trading signal is given by equation (3), which we reproduce here for convenience:
+St = 1 {ϵt ≤ −kσ} − 1 {ϵt ≥ kσ} .
+The return of the spread is rt+1 = St(r2,t+1 − r1,t+1), which we can write as
+rt+1 = Steµ1+δ1,t+1
+ 
+eϵt+1−ϵt − 1
+
+. (23)
+We will now calculate the mean and variance of this quantity. We begin with the mean. We can easily take
+the expectation with respect to δ1,t+1 and ϵt+1 to obtain
+E[rt+1|ϵt] = Steµ1+σ2
+1 /2(eσ2/2−ϵt − 1).
+
+===== PAGE 28 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+28
+The expectation over ϵt is more complicated as both the signal and the term in the parentheses depend
+upon it. We start by observing that E[St] = 0. Applying this we obtain
+E[rt+1] = eµ1+σ2
+1 /2+σ2/2E[Ste−ϵt].
+If we make the substitution ϵt = σz, we can write the expectation as
+E[Ste−ϵt] = 1√
+2π
+Z −k
+e−σz−z2/2dz − 1√
+2π
+Z
+k
+e−σz−z2/2dz.
+To simplify this expression, we complete the square in the exponent to obtain
+E[Ste−ϵt] = eσ2/2
+√
+2π
+Z −k
+e−(z+σ)2/2dz −
+Z
+k
+e−(z+σ)2/2dz
+
+which can be more easily expressed as
+E[Ste−ϵt] = eσ2/2 (P(Z ≤ −k + σ) − P(Z ≥ k + σ)) . (24)
+where Z is a standard normal random variable with mean 0 and unit variance. Substituting this into the
+expression for the mean returns we obtain
+E[rt+1] = eµ1+σ2
+1 /2+σ2
+(P(Z ≤ −k + σ) − P(Z ≥ k + σ)) .
+We can further simplify this by using the symmetry of Z to obtain
+E[rt+1] = eµ1+σ2
+1 /2+σ2
+P(k − σ ≤ Z ≤ k + σ).
+To compute the variance, we begin by analyzing the square pair returns. We can write this as
+(rt+1)2 = e2µ1+2δ1,t+1S2
+t
+ 
+e2ϵt+1−2ϵt − 2eϵt+1−ϵt + 1
+
+If we take the expectation over δ1,t+1 and ϵt+1 we obtain
+E[(rt+1)2] = e2µ1+2σ2
+1
+
+e2σ2
+E[S2
+t e−2ϵt] − 2eσ2/2E[S2
+t e−ϵt] +E[S2
+t ]
+
+.
+
+===== PAGE 29 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+29
+We now simplify the different expectations in this expression. First, we consider the simplest term involv-
+ing S2
+t . We can express this as
+E[S2
+t ] = E[1 {ϵt ≤ −kσ}] +E[1 {ϵt ≥ kσ}] − 2E[1 {ϵt ≤ −kσ}]E[1 {ϵt ≥ kσ}]
+= E[1 {ϵt ≤ −kσ}] +E[1 {ϵt ≥ kσ}]
+= P(Z ≤ −k) +P(Z ≥ k)
+= 2P(Z ≥ k)
+where Z is a standard normal random variable.
+The other expectations have a similar structure, so we will derive a simplified expression for a more
+general quantity. We defineϵt = σz and choose a constant c > 0. Then we have
+E[e−cϵtS2
+t ] = 1
+σ
+√
+2π
+Z −kσ
+e−cϵt−ϵ2
+t /(2σ2)dϵt +
+Z
+kσ
+e−cϵt−ϵ2
+t /(2σ2)dϵt
+
+= 1√
+2π
+Z −k
+e−cσz−z2/2dz +
+Z
+k
+e−cσz−z2/2dz
+
+.
+As we did when calculating the mean returns, we complete the square in the exponent to obtain
+E[e−cϵtS2
+t ] = ec2σ2/2
+√
+2π
+Z −k
+e−(z+cσ)2/2dz +
+Z
+k
+e−(z+cσ)2/2dz
+
+.
+This can be simplified to
+E[S2
+t e−cϵt] = ec2σ2/2 (P(Z ≤ −k + cσ) +P(Z ≥ k + cσ))
+where Z is a standard normal random variable. Using this expression we obtain the second moment of
+the pair returns:
+E[(rt+t)2] =e2µ1+2σ2
+1 +4σ2
+(P(Z ≤ −k + 2σ) +P(Z ≥ k + 2σ))
+− 2e2µ1+2σ2
+1 +σ2
+(P(Z ≤ −k + σ) +P(Z ≥ k + σ))
++ e2µ1+2σ2
+1 P(Z ≥ k).
+The variance of the returns is then given by
+Var(rt+t) =e2µ1+2σ2
+1 +4σ2
+(P(Z ≤ −k + 2σ) +P(Z ≥ k + 2σ))
+− 2e2µ1+2σ2
+1 +σ2
+(P(Z ≤ −k + σ) +P(Z ≥ k + σ))
++ 2e2µ1+2σ2
+1 P(Z ≥ k) − E2[r1].
+
+===== PAGE 30 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+30
+7.2. Proof of Theorem 2
+We prove here the results of Theorem 2 for the covariance of a cointegrated pair. We consider cointegrated
+pairs a and b which share a common stock. We assume the pair a is stocks 1 and 2 and pair b is stocks 1
+and 3. We can write
+ra
+t+1rb
+t+1 = SatSbt
+
+eµ1+δ1,t+1+ϵa,t+1−ϵa,t − 1
+ 
+eµ1+δ1,t+1+ϵb,t+1−ϵbt − 1
+
+= Sa
+t Sb
+t
+ 
+e2µ1+2δ1,t+1+ϵa,t+1−ϵat+ϵb,t+1−ϵbt − eµ1+δ1,t+1+ϵa,t+1−ϵat − eµ1+δ1,t+1+ϵb,t+1−ϵbt + 1
+
+.
+If we take the expectation of this expression we obtain
+E[ra
+t+1rb
+t+1] = e2µ1+2σ2
+1 +σ2
+a/2+σ2
+b /2E[Sate−ϵat]E[Sbte−ϵbt]
+= e2µ1+2σ2
+1 +σ2
+a+σ2
+b (P(Z ≤ −k + σa) − P(Z ≥ k + σa)) (P(Z ≤ −k + σb) − P(Z ≥ k + σb))
+= eσ2
+1 E[ra
+t+1]E[rb
+t+1].
+Above we used the fact that the mean value of the signal for each pair is zero, equation (24), and Theorem
+1 for the mean return of the pairs. The covariance is then given by
+Cov(ra
+t+1, rb
+t+1) =
+
+eσ2
+1 − 1
+
+E[ra
+t+1]E[rb
+t+1].
+7.3. Proof of Theorem 3
+We prove here the results of Theorem 3 for the mean and variance of a non-cointegrated pair. Consider a
+non-cointegrated pair of stocks 1 and 2 whose returns at time t + 1 are given by
+ri,t+1 = eµi+δi,t+1 − 1, i ∈ {1, 2} , (25)
+Note that for non-cointegrated pairs, the returns of the stocks at timet + 1are independent of the trading
+signal at time t. We also note that by symmetry the signal has mean zero. Using these properties, we have
+E [rt+1] = E [St(r2,t+1 − r1,t+1)]
+= E [St] E [(r2,t+1 − r1,t+1)]
+= 0.
+
+===== PAGE 31 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+31
+For the second moment, we have
+E[r2
+t+1] = E[S2
+t ]E[(eµ2+δ2,t+1 − eµ1+δ1,t+1)2]
+= E[S2
+t ]E[e2µ2+2δ2,t+1 + e2µ1+2δ1,t+1 − 2eµ1+µ2+δ1,t+1+δ2,t+1]
+= E[S2
+t ]
+
+e2µ2+2σ2
+2 + e2µ1+2σ2
+1 − 2eµ1+µ2+σ2
+1 /2+σ2
+2 /2
+
+.
+Because of the way the signal is constructed, the expectation of it squared is
+E[S2
+t ] = E[1 {Z ≤ −k}] +E[1 {Z ≥ k}] − 2E[1 {Z ≤ −k} 1 {Z ≥ k}]
+= P(Z ≤ −k) +P(Z ≥ k)
+= 2P(Z ≥ k)
+where Z is a standard normal random variable. Using this expression, we obtain the variance of the returns
+as
+Var(rt+1) = 2P(Z ≥ k)
+
+e2µ1+2σ2
+1 + e2µ2+2σ2
+2 − 2eµ1+µ2+σ2
+1 /2+σ2
+2 /2
+
+.
+7.4. Proof of Theorem 4
+We prove here the results of Theorem 4 for the covariance of a non-cointegrated pair. We have two non-
+cointegrated pairs a and b, where paira is stocks 1 and 2 and pairb is stocks 1 and 3. Taking the expectation
+of the product of their returns, we obtain
+E[ra,t+1rb,t+1] = E[SatSbt(eµ3+δ3,t+1 − eµ1+δ1,t+1)(eµ2+δ2,t+1 − eµ1+δ1,t+1)]
+= E[Sa
+t Sb
+t ]
+
+eµ2+µ3+σ2
+2 /2+σ2
+3 /2 − eµ1+µ3+σ2
+1 /2+σ2
+3 /2 − eµ1+µ2+σ2
+1 /2+σ2
+2 /2 + e2µ1+2σ2
+1
+
+The challenge here is with the expectation of the product of the signals. To evaluate this expectation, we
+define a set of independent normal random variablesXit with mean zero and variancetσ2
+i for i ∈ {1, 2, 3}.
+We can express the spreads as
+ϵa
+t = X2t − X1t
+ϵb
+t = X3t − X1t.
+
+===== PAGE 32 =====
+
+Qureshi and Zaman: Pairs Trading Using a Novel Graphical Matching Approach
+32
+Let us define
+Za = X2t − X1tp
+t(σ2
+1 + σ2
+2)
+Zb = X3t − X1tp
+t(σ2
+1 + σ2
+3)
+.
+The random variables Za and Zb are zero mean jointly normal random variables with covariance matrix
+Σ =
+
+
+1
+σ2
+1√
+(σ2
+1 +σ2
+2 )(σ2
+1 +σ2
+3 )
+σ2
+1√
+(σ2
+1 +σ2
+2 )(σ2
+1 +σ2
+3 )
+1
+
+ .
+Using this we can write the expected value of the signal product as
+E[SatSbt] =E[(1 {Za ≤ −k}) (1 {Zb ≤ −k})] +E[(1 {Za ≥ k}) (1 {Zb ≥ k})]
+− E[(1 {Za ≤ −k}) (1 {Zb ≥ k})] − E[(1 {Za ≥ k}) (1 {Zb ≤ −k})]
+=2P
+
+Za ≥ k
+\
+Zb ≥ k
+
+− 2P
+
+Za ≥ k
+\
+Zb ≤ −k
+
+.
+Noting that the mean value of the returns of a non-cointegrated pair is zero from Theorem 3, we can then
+write the covariance as
+Cov(ra,t+1, rb,t+1) = E[ra,t+1rb,t+1]
+=2
+
+P
+
+Za ≥ k
+\
+Zb ≥ k
+
+− P
+
+Za ≥ k
+\
+Zb ≤ −k
+
+×
+
+eµ2+µ3+σ2
+2 /2+σ2
+3 /2 − eµ1+µ3+σ2
+1 /2+σ2
+3 /2 − eµ1+µ2+σ2
+1 /2+σ2
+2 /2 + e2µ1+2σ2
+1
+
+.
