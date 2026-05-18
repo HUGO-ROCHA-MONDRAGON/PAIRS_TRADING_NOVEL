@@ -1,0 +1,23 @@
+{
+  "entry_zscore": 1.0,
+  "lookback": 504,
+  "max_holding_days": 120,
+  "max_positions_per_side": 50,
+  "min_history": 252,
+  "min_holding_days": 21,
+  "n_components": 8,
+  "tc_bps": 5,
+  "vol_target": 0.15,
+  "zscore_window": 60,
+  "total_return": 1.81377182036681,
+  "cagr": 0.04233834792610591,
+  "vol": 0.07213266766945828,
+  "sharpe": 0.3435256601342871,
+  "sortino": 0.574087422400023,
+  "calmar": 0.14713388971023297,
+  "max_dd": -0.2877538819199812,
+  "beta_mean_abs": 0.08584240771309834,
+  "avg_positions": 95.73723556545252,
+  "avg_gross": 2.1295270473122088,
+  "total_costs": 766513.5105635894
+}

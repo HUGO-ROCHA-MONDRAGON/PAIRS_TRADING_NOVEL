@@ -1,0 +1,24 @@
+{
+  "beta_lookback": 504,
+  "n_buckets": 7,
+  "tc_bps": 5,
+  "vol_window": 40,
+  "long_short_style": "extreme_only",
+  "total_return": 1.2199423604723174,
+  "cagr": 0.0324815838482417,
+  "vol": 0.0800224883670831,
+  "sharpe": 0.1864808068961774,
+  "sortino": 0.3123964298629738,
+  "calmar": 0.1299877441592124,
+  "max_dd": -0.2498818950843352,
+  "beta_mean_abs": 0.1150110884211861,
+  "avg_positions": 132.72975982185463,
+  "avg_gross": 1.0362653093685383,
+  "total_costs": 69166.75595392763,
+  "long_buckets": [
+    1
+  ],
+  "short_buckets": [
+    7
+  ]
+}
