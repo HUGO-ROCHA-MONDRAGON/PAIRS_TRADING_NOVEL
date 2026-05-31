@@ -168,3 +168,12 @@ Before pushing publicly, confirm that no proprietary data or copyrighted PDFs ar
 git status
 git ls-files src/data
 ```
+
+## Guides en français
+
+Des résumés en français, concis et pratiques pour les notebooks principaux ont été ajoutés :
+- [01 — Ingestion et préparation des données (FR)](notebooks/01_data_ingestion_graph_matching_fr.md)
+- [02 — Réplication partielle avec 4 Parquets (FR)](notebooks/02_replication_partial_with_4_parquets_fr.md)
+- [03 — Réplication complète du papier (FR)](notebooks/03_full_paper_replication_fr.md)
+
+Ces documents donnent des instructions rapides, des conseils pratiques et les commandes d'exécution recommandées.

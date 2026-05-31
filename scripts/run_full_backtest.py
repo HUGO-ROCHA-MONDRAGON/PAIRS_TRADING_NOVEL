@@ -215,6 +215,78 @@ def main() -> None:
         pd.concat(selected_baseline_parts, ignore_index=True).to_parquet(args.out_dir / "selected_pairs_baseline.parquet", index=False)
     table = performance_table(returns[["gross_matching", "net_matching", "gross_baseline", "net_baseline", "benchmark"]], risk_free)
     table.to_csv(args.out_dir / "table_performance.csv", index=False)
+    # --- Harmonisation des noms de fichiers attendus par les notebooks ---
+    try:
+        # Copies de outputs pour compatibilité avec notebooks existants
+        returns.to_parquet(args.out_dir / "strategy_returns_all.parquet")
+        returns.to_parquet(args.out_dir / "strategy_returns_final.parquet")
+
+        # Construire figs345 CSVs (turnover / retention / concentration) à partir des paires sélectionnées
+        import math as _math
+
+        selM_df = pd.concat(selected_matching_parts, ignore_index=True) if selected_matching_parts else pd.DataFrame()
+        selB_df = pd.concat(selected_baseline_parts, ignore_index=True) if selected_baseline_parts else pd.DataFrame()
+        if not selM_df.empty and 'reb_date' in selM_df.columns:
+            selM_df['reb_date'] = pd.to_datetime(selM_df['reb_date'])
+        if not selB_df.empty and 'reb_date' in selB_df.columns:
+            selB_df['reb_date'] = pd.to_datetime(selB_df['reb_date'])
+
+        def compute_retention(df: pd.DataFrame) -> pd.Series:
+            if df.empty or 'reb_date' not in df.columns:
+                return pd.Series(dtype=float)
+            groups = df.groupby('reb_date').apply(lambda g: set(g['asset_a']).union(set(g['asset_b'])))
+            dates = sorted(groups.index)
+            rows = []
+            for i in range(1, len(dates)):
+                a = groups[dates[i - 1]]
+                b = groups[dates[i]]
+                inter = len(a & b)
+                union = len(a | b) or 1
+                rows.append((dates[i], inter / union * 100.0))
+            if not rows:
+                return pd.Series(dtype=float)
+            return pd.Series({r[0]: r[1] for r in rows})
+
+        def compute_turnover(df: pd.DataFrame) -> pd.Series:
+            if df.empty or 'reb_date' not in df.columns:
+                return pd.Series(dtype=float)
+            groups = df.groupby('reb_date').apply(lambda g: set(g['asset_a']).union(set(g['asset_b'])))
+            return pd.Series({d: len(s) / (args.max_pairs * 2) * 100.0 for d, s in groups.items()})
+
+        def compute_concentration(df: pd.DataFrame) -> pd.Series:
+            if df.empty or 'reb_date' not in df.columns:
+                return pd.Series(dtype=float)
+            def conc_for_group(g: pd.DataFrame) -> float:
+                assets = list(g['asset_a']) + list(g['asset_b'])
+                if not assets:
+                    return 0.0
+                counts = pd.Series(assets).value_counts()
+                return float(counts.max() / counts.sum() * 100.0)
+            conc = df.groupby('reb_date').apply(conc_for_group)
+            conc.index = pd.to_datetime(conc.index)
+            return conc
+
+        ret_match = compute_retention(selM_df)
+        ret_base = compute_retention(selB_df)
+        if not ret_match.empty or not ret_base.empty:
+            ret_df = pd.DataFrame({'Matching': ret_match, 'Baseline': ret_base}).sort_index()
+            ret_df.to_csv(args.out_dir / 'figs345_retention.csv')
+
+        to_match = compute_turnover(selM_df)
+        to_base = compute_turnover(selB_df)
+        if not to_match.empty or not to_base.empty:
+            to_df = pd.DataFrame({'Matching': to_match, 'Baseline': to_base}).sort_index()
+            to_df.to_csv(args.out_dir / 'figs345_turnover.csv')
+
+        conc_match = compute_concentration(selM_df)
+        conc_base = compute_concentration(selB_df)
+        if not conc_match.empty or not conc_base.empty:
+            conc_df = pd.DataFrame({'Matching': conc_match, 'Baseline': conc_base}).sort_index()
+            conc_df.to_csv(args.out_dir / 'figs345_concentration.csv')
+
+    except Exception as _exc:
+        print(f"Warning: unable to produce supplemental figs345 CSVs: {_exc}")
+
     print(table.to_string(index=False))
     print(f"Saved outputs to {args.out_dir}")
     print(f"Elapsed seconds: {time.time() - start:.1f}")
