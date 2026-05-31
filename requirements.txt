@@ -1,0 +1,10 @@
+numpy>=1.26
+pandas>=2.1
+pyarrow>=15.0
+matplotlib>=3.8
+networkx>=3.2
+statsmodels>=0.14
+scipy>=1.11
+nbclient>=0.10
+nbformat>=5.9
+jupyter>=1.0
