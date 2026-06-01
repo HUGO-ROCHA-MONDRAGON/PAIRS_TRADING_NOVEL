@@ -23,11 +23,19 @@ def processed_data_dir(root: str | Path | None = None, phase: str = "phase1_full
 
 
 def required_raw_files(full: bool = True) -> list[str]:
-    base = ["prices.parquet", "pe_ratios.parquet", "risk_free.parquet", "universe.parquet"]
+    base = ["prices.parquet", "pe_ratios.parquet", "risk_free_US.parquet", "universe.parquet"]
     extra = ["benchmark.parquet", "log_prices.parquet", "daily_returns.parquet", "rebalance_dates.parquet"]
     return base + extra if full else base
 
 
 def missing_raw_files(root: str | Path | None = None, full: bool = True) -> list[str]:
     raw = raw_data_dir(root)
-    return [name for name in required_raw_files(full=full) if not (raw / name).exists()]
+    missing = []
+    for name in required_raw_files(full=full):
+        if name == "risk_free_US.parquet":
+            if not (raw / "risk_free_US.parquet").exists() and not (raw / "Risk_free_US.xlsx").exists():
+                missing.append(name)
+            continue
+        if not (raw / name).exists():
+            missing.append(name)
+    return missing

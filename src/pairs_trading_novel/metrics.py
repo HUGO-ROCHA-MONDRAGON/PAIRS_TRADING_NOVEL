@@ -32,6 +32,19 @@ def sharpe_ratio(returns: pd.Series, risk_free: pd.Series | None = None, periods
     return annual_return(r, periods_per_year) / vol
 
 
+def sharpe_ratio_mean_std(returns: pd.Series, risk_free: pd.Series | None = None, periods_per_year: int = 252) -> float:
+    """Sharpe annualisé standard: mean(excess) / std(excess) * sqrt(252)."""
+    r = returns.dropna()
+    if len(r) == 0:
+        return float("nan")
+    if risk_free is not None:
+        r = r.sub(risk_free.reindex(r.index).fillna(0.0), fill_value=0.0)
+    std = float(r.std(ddof=1))
+    if not np.isfinite(std) or std <= 1e-12:
+        return float("nan")
+    return float(r.mean() / std * math.sqrt(periods_per_year))
+
+
 def max_drawdown(returns: pd.Series) -> float:
     r = returns.dropna()
     if len(r) == 0:

@@ -54,7 +54,7 @@ EXPECTED_FILES = [
     "prices.parquet",
     "pe_ratios.parquet",
     "universe.parquet",
-    "risk_free.parquet",
+    "risk_free_US.parquet",
     "benchmark.parquet",
     "static_metadata.parquet",
 ]
@@ -435,7 +435,7 @@ class BloombergDataProvider:
         rf = data["risk_free"]
         if isinstance(rf, pd.Series):
             rf = rf.to_frame("risk_free")
-        rf.to_parquet(self.output_path / "risk_free.parquet")
+        rf.to_parquet(self.output_path / "risk_free_US.parquet")
 
         bench = data["benchmark"]
         if isinstance(bench, pd.Series):
@@ -452,7 +452,7 @@ class BloombergDataProvider:
         prices    = pd.read_parquet(self.output_path / "prices.parquet")
         pe_ratios = pd.read_parquet(self.output_path / "pe_ratios.parquet")
         universe  = pd.read_parquet(self.output_path / "universe.parquet")
-        rf_df     = pd.read_parquet(self.output_path / "risk_free.parquet")
+        rf_df     = pd.read_parquet(self.output_path / "risk_free_US.parquet")
 
         static_path = self.output_path / "static_metadata.parquet"
         bench_path = self.output_path / "benchmark.parquet"

@@ -6,6 +6,11 @@ import networkx as nx
 import numpy as np
 import pandas as pd
 
+try:
+    from statsmodels.tsa.stattools import adfuller
+except ImportError:  # pragma: no cover
+    adfuller = None
+
 
 def ols_beta_resid(y: np.ndarray, x: np.ndarray) -> tuple[float, float, np.ndarray]:
     xm = x - x.mean()
@@ -43,25 +48,62 @@ def adf1_tstat(series: np.ndarray) -> float:
         return float("nan")
 
 
-def score_pair(lp_a: pd.Series, lp_b: pd.Series, min_obs: int = 252, adf_t_threshold: float = -2.5) -> dict | None:
+def adf1_stats(series: np.ndarray) -> tuple[float, float]:
+    """Retourne (t-stat, p-value) pour ADF(1) avec constante.
+
+    Si statsmodels est indisponible, p-value = NaN et t-stat numpy fallback.
+    """
+    e = series[np.isfinite(series)]
+    if len(e) < 20:
+        return float("nan"), float("nan")
+    if adfuller is None:
+        return adf1_tstat(e), float("nan")
+    try:
+        t_stat, p_value, *_ = adfuller(e, maxlag=1, regression="c", autolag=None)
+        return float(t_stat), float(p_value)
+    except Exception:
+        return adf1_tstat(e), float("nan")
+
+
+def score_pair(
+    lp_a: pd.Series,
+    lp_b: pd.Series,
+    min_obs: int = 252,
+    adf_t_threshold: float | None = None,
+    adf_pvalue_threshold: float | None = None,
+) -> dict | None:
     frame = pd.concat([lp_a, lp_b], axis=1).dropna()
     if len(frame) < min_obs:
         return None
     first = frame.iloc[:, 0].to_numpy(float)
     second = frame.iloc[:, 1].to_numpy(float)
     best_t = np.inf
+    best_p = np.inf
     best = None
     for orientation, y, x in [("a_on_b", first, second), ("b_on_a", second, first)]:
         alpha, beta, resid = ols_beta_resid(y, x)
         if not np.isfinite(alpha):
             continue
-        t_stat = adf1_tstat(resid)
-        if np.isfinite(t_stat) and t_stat < best_t:
+        t_stat, p_value = adf1_stats(resid)
+        if not np.isfinite(t_stat):
+            continue
+        # Orientation prioritaire: p-value la plus faible; tie-break: t-stat le plus négatif.
+        better = False
+        if np.isfinite(p_value):
+            better = (p_value < best_p) or (np.isclose(p_value, best_p) and t_stat < best_t)
+        else:
+            better = (not np.isfinite(best_p)) and (t_stat < best_t)
+        if better:
+            best_p = p_value
             best_t = t_stat
-            best = orientation, alpha, beta, resid, t_stat
-    if best is None or best[4] >= adf_t_threshold:
+            best = orientation, alpha, beta, resid, t_stat, p_value
+    if best is None:
         return None
-    orientation, alpha, beta, resid, t_stat = best
+    if adf_t_threshold is not None and best[4] >= adf_t_threshold:
+        return None
+    if adf_pvalue_threshold is not None and np.isfinite(best[5]) and best[5] > adf_pvalue_threshold:
+        return None
+    orientation, alpha, beta, resid, t_stat, p_value = best
     sigma = float(np.std(resid, ddof=1))
     if not np.isfinite(sigma) or sigma <= 1e-10:
         return None
@@ -72,6 +114,7 @@ def score_pair(lp_a: pd.Series, lp_b: pd.Series, min_obs: int = 252, adf_t_thres
         "mu": float(resid.mean()),
         "sigma": sigma,
         "adf_t": float(t_stat),
+        "adf_pvalue": float(p_value) if np.isfinite(p_value) else float("nan"),
         "weight": float(-t_stat),
     }
 
@@ -97,4 +140,9 @@ def select_matching(edges: pd.DataFrame, max_pairs: int = 25) -> pd.DataFrame:
 def select_baseline(edges: pd.DataFrame, max_pairs: int = 25) -> pd.DataFrame:
     if edges.empty:
         return edges.copy()
-    return edges.head(max_pairs).reset_index(drop=True)
+    # Baseline du papier: top paires par plus faible p-value ADF.
+    if "adf_pvalue" in edges.columns:
+        ranked = edges.sort_values(["adf_pvalue", "adf_t"], ascending=[True, True])
+    else:
+        ranked = edges.sort_values("weight", ascending=False)
+    return ranked.head(max_pairs).reset_index(drop=True)

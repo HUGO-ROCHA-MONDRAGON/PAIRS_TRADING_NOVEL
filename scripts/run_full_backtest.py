@@ -23,7 +23,21 @@ def load_inputs(raw: Path) -> dict[str, pd.DataFrame | pd.Series | pd.DatetimeIn
     daily_returns = pd.read_parquet(raw / "daily_returns.parquet")
     universe = pd.read_parquet(raw / "universe.parquet")
     benchmark_raw = pd.read_parquet(raw / "benchmark.parquet")
-    risk_free_raw = pd.read_parquet(raw / "risk_free.parquet")
+    rf_parquet = raw / "risk_free_US.parquet"
+    rf_xlsx = raw / "Risk_free_US.xlsx"
+    if rf_parquet.exists():
+        risk_free_raw = pd.read_parquet(rf_parquet)
+    elif rf_xlsx.exists():
+        risk_free_raw = pd.read_excel(rf_xlsx)
+        if risk_free_raw.shape[1] < 2:
+            raise ValueError("Risk_free_US.xlsx doit contenir au moins 2 colonnes (date, valeur).")
+        risk_free_raw = risk_free_raw.iloc[:, :2].copy()
+        risk_free_raw.columns = ["date", "risk_free_us"]
+        risk_free_raw["date"] = pd.to_datetime(risk_free_raw["date"])
+        risk_free_raw = risk_free_raw.set_index("date").sort_index()
+        risk_free_raw.to_parquet(rf_parquet)
+    else:
+        raise FileNotFoundError("risk_free_US.parquet ou Risk_free_US.xlsx introuvable dans src/data/raw")
     rebalance_dates = pd.read_parquet(raw / "rebalance_dates.parquet")
     for df in [log_prices, daily_returns, benchmark_raw, risk_free_raw]:
         df.index = pd.to_datetime(df.index)
